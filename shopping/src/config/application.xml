@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.2.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.2.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.2.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.2.xsd">
+
+
+	<bean id="propertyConfigurer"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<list>
+				<value>classpath:resources/jdbc.properties</value>
+				<value>classpath:resources/env.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean class="cn.spring.entity.Environment" id="env">
+		<property name="env">
+			<map>
+				<entry key="featurebanner" value="${featurebanner}"></entry>
+				<entry key="imagePath" value="${imagePath}"></entry>
+			</map>
+		</property>
+	</bean>
+
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<property name="user" value="${jdbc.user}"></property>
+		<property name="driverClass" value="${jdbc.Driver}"></property>
+		<property name="jdbcUrl" value="${jdbc.url}"></property>
+		<property name="password" value="${jdbc.password}"></property>
+		<property name="maxPoolSize" value="${maxPoolSize}"></property>
+	</bean>
+	<bean class="org.springframework.jdbc.core.JdbcTemplate" id="template">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	<bean
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		id="transactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+	<!-- 通过AOP配置提供事务增强，让service包下所有Bean的所有方法拥有事务 -->
+	<aop:config proxy-target-class="true">
+		<aop:pointcut id="serviceMethod" expression=" execution(* cn.spring.dao..*(..))" />
+		<aop:advisor pointcut-ref="serviceMethod" advice-ref="txAdvice" />
+	</aop:config>
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="update" />
+			<tx:method name="insert" />
+			<tx:method name="delete" />
+		</tx:attributes>
+	</tx:advice>
+
+	<context:component-scan base-package="cn.spring"></context:component-scan>
+	<context:annotation-config />
+	<mvc:annotation-driven />
+	<aop:aspectj-autoproxy/>
+	
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+			<property name="defaultEncoding" value="UTF-8"></property>
+			<property name="maxUploadSize" value="1024000"></property>
+	</bean>
+		
+	<mvc:interceptors>
+		<mvc:interceptor>
+				<mvc:mapping path="/**"/>
+				<bean  id="loginValidate" class="cn.spring.interceptor.LoginValidation"></bean>
+		</mvc:interceptor>
+	</mvc:interceptors>
+</beans>
